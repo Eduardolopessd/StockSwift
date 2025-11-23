@@ -19,6 +19,8 @@ export default function AddProduct({ onComplete }: AddProductProps) {
   const [error, setError] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [photoPreview, setPhotoPreview] = useState<string>("")
+  const [scanMode, setScanMode] = useState(false)
+  const [barcodeBuffer, setBarcodeBuffer] = useState("")
 
   const [formData, setFormData] = useState({
     sku: "",
@@ -30,8 +32,21 @@ export default function AddProduct({ onComplete }: AddProductProps) {
     description: "",
   })
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (scanMode && e.key === "Enter") {
+      setFormData({ ...formData, sku: barcodeBuffer })
+      setBarcodeBuffer("")
+      setScanMode(false)
+    }
+  }
+
   const handlePhotoClick = () => {
-    fileInputRef.current?.click()
+    if (scanMode) {
+      setScanMode(false)
+      setBarcodeBuffer("")
+    } else {
+      fileInputRef.current?.click()
+    }
   }
 
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -119,15 +134,27 @@ export default function AddProduct({ onComplete }: AddProductProps) {
             <div className="flex gap-2">
               <Input
                 type="text"
-                placeholder="EAN ou código do produto"
-                value={formData.sku}
-                onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                placeholder={scanMode ? "Escaneie o código de barras..." : "EAN ou código do produto"}
+                value={scanMode ? barcodeBuffer : formData.sku}
+                onChange={(e) => {
+                  if (scanMode) {
+                    setBarcodeBuffer(e.target.value)
+                  } else {
+                    setFormData({ ...formData, sku: e.target.value })
+                  }
+                }}
+                onKeyDown={handleKeyDown}
               />
-              <Button type="button" variant="outline" size="icon" onClick={handlePhotoClick}>
+              <Button type="button" variant={scanMode ? "default" : "outline"} size="icon" onClick={handlePhotoClick}>
                 <Camera className="w-5 h-5" />
               </Button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
             </div>
+            {scanMode && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Modo scanner ativo - aponte a câmera ou digite o código
+              </p>
+            )}
           </div>
 
           <div>

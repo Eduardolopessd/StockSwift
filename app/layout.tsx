@@ -12,7 +12,16 @@ export const metadata: Metadata = {
   title: "StockSwift - Controle de Estoque",
   description: "Aplicativo de controle de estoque local com PDV simples",
   generator: "v0.app",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "StockSwift",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
   icons: {
     icon: [
       {
@@ -51,6 +60,19 @@ export default function RootLayout({
                   document.documentElement.classList.add('dark');
                 }
               } catch (e) {}
+            `,
+          }}
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then(reg => console.log('[PWA] Service Worker registered:', reg))
+                    .catch(err => console.log('[PWA] Service Worker registration failed:', err));
+                });
+              }
             `,
           }}
         />

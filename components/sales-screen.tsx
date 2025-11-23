@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useProducts, useSales } from "@/lib/hooks"
 import type { Product, SaleItem } from "@/lib/db"
 import { Search, Plus, Minus, Trash2, Camera } from "lucide-react"
@@ -29,6 +29,9 @@ export default function SalesScreen({ onBack }: SalesScreenProps) {
   const [useCostPrice, setUseCostPrice] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [scanMode, setScanMode] = useState(false)
+  const [barcodeBuffer, setBarcodeBuffer] = useState("")
 
   // Handle search
   useEffect(() => {
@@ -47,6 +50,40 @@ export default function SalesScreen({ onBack }: SalesScreenProps) {
     setSearchResults(results)
   }, [searchQuery, products])
 
+  // Handle barcode scanning via keyboard input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!scanMode) return
+
+      if (e.key === "Enter") {
+        const query = barcodeBuffer.trim()
+        if (query) {
+          const product = products.find(
+            (p) => p.sku.toLowerCase() === query.toLowerCase() || p.internalCode.toLowerCase() === query.toLowerCase(),
+          )
+          if (product) {
+            addToCart(product)
+          } else {
+            setError("Produto não encontrado")
+          }
+          setBarcodeBuffer("")
+        }
+        return
+      }
+
+      if (e.key === "Escape") {
+        setScanMode(false)
+        setBarcodeBuffer("")
+        return
+      }
+
+      setBarcodeBuffer((prev) => prev + e.key)
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  }, [scanMode, barcodeBuffer, products])
+
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + item.salePrice * item.quantity, 0)
 
@@ -60,11 +97,13 @@ export default function SalesScreen({ onBack }: SalesScreenProps) {
   const addToCart = (product: Product) => {
     setCartItems((prev) => {
       const existing = prev.find((item) => item.productId === product.id)
-      if (existing) {
-        return prev.map((item) => (item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item))
-      }
+      const finalPrice = useCostPrice ? product.costPrice : product.salePrice
 
-      const salePrice = useCostPrice ? product.costPrice : product.salePrice
+      if (existing) {
+        return prev.map((item) =>
+          item.productId === product.id ? { ...item, quantity: item.quantity + 1, salePrice: finalPrice } : item,
+        )
+      }
 
       return [
         ...prev,
@@ -72,7 +111,7 @@ export default function SalesScreen({ onBack }: SalesScreenProps) {
           productId: product.id,
           productName: product.name,
           quantity: 1,
-          salePrice,
+          salePrice: finalPrice,
           costPrice: product.costPrice,
         },
       ]
@@ -80,6 +119,24 @@ export default function SalesScreen({ onBack }: SalesScreenProps) {
 
     setSearchQuery("")
     setSearchResults([])
+    setError("")
+  }
+
+  // Toggle cost price to recalculate all cart items
+  const toggleCostPrice = (checked: boolean) => {
+    setUseCostPrice(checked)
+
+    setCartItems((prev) =>
+      prev.map((item) => {
+        const product = products.find((p) => p.id === item.productId)
+        if (!product) return item
+
+        return {
+          ...item,
+          salePrice: checked ? product.costPrice : product.salePrice,
+        }
+      }),
+    )
   }
 
   // Update quantity
@@ -154,13 +211,24 @@ export default function SalesScreen({ onBack }: SalesScreenProps) {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Buscar produto..."
-              value={searchQuery}
+              placeholder={scanMode ? "Escaneie ou digite código..." : "Buscar produto..."}
+              value={searchQuery || barcodeBuffer}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
             />
           </div>
-          <Button variant="outline" size="icon">
+          <Button
+            variant={scanMode ? "default" : "outline"}
+            size="icon"
+            onClick={() => {
+              if (scanMode) {
+                setScanMode(false)
+                setBarcodeBuffer("")
+              } else {
+                setScanMode(true)
+              }
+            }}
+          >
             <Camera className="w-5 h-5" />
           </Button>
         </div>
@@ -254,7 +322,7 @@ export default function SalesScreen({ onBack }: SalesScreenProps) {
               <input
                 type="checkbox"
                 checked={useCostPrice}
-                onChange={(e) => setUseCostPrice(e.target.checked)}
+                onChange={(e) => toggleCostPrice(e.target.checked)}
                 className="w-4 h-4"
               />
               <span className="text-sm">Vender a preço de custo</span>
