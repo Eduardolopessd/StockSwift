@@ -4,6 +4,7 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { Menu, Plus, BarChart3, Settings, Package, Trash2, Wifi, WifiOff } from "lucide-react"
+import Image from "next/image"
 import Dashboard from "@/components/dashboard"
 import ProductSearch from "@/components/product-search"
 import AddProduct from "@/components/add-product"
@@ -56,7 +57,7 @@ export default function Home() {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <div className="mb-4 text-4xl">📱</div>
+          <Image src="/logo.png" alt="StockSwift Logo" width={150} height={150} priority className="mb-4 mx-auto" />
           <p className="text-foreground/70">Carregando StockSwift...</p>
         </div>
       </div>
@@ -72,9 +73,12 @@ export default function Home() {
         }`}
       >
         <div className="flex flex-col h-full">
-          <div className="p-6 border-b border-sidebar-border">
-            <h1 className="text-2xl font-bold text-sidebar-primary">StockSwift</h1>
-            <p className="text-sm text-sidebar-foreground/70">Controle de Estoque</p>
+          <div className="p-6 border-b border-sidebar-border flex flex-col items-center gap-3">
+            <Image src="/logo.png" alt="StockSwift Logo" width={80} height={80} className="object-contain" />
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-sidebar-primary">StockSwift</h1>
+              <p className="text-sm text-sidebar-foreground/70">Controle Offline</p>
+            </div>
           </div>
 
           <nav className="flex-1 overflow-y-auto p-4 space-y-2">
