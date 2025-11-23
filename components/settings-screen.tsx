@@ -227,9 +227,6 @@ export default function SettingsScreen() {
       {/* About */}
       <Card className="p-6 space-y-2 text-center text-sm text-muted-foreground">
         <p className="font-semibold text-foreground">StockSwift v1.0.0</p>
-        <p>Controle de Estoque Local</p>
-        <p>Totalmente Offline - Todos os dados armazenados localmente</p>
-        <p className="text-xs mt-4">Desenvolvido com ❤️</p>
       </Card>
     </div>
   )
