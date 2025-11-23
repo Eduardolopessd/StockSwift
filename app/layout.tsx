@@ -23,21 +23,19 @@ export const metadata: Metadata = {
   },
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
   icons: {
-    icon: [
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
+  openGraph: {
+    title: "StockSwift - Controle de Estoque",
+    description: "Aplicativo de controle de estoque local com PDV simples - Funciona Offline",
+    images: [
       {
-        url: "/icon-light-32x32.png",
-        media: "(prefers-color-scheme: light)",
-      },
-      {
-        url: "/icon-dark-32x32.png",
-        media: "(prefers-color-scheme: dark)",
-      },
-      {
-        url: "/icon.svg",
-        type: "image/svg+xml",
+        url: "/logo.png",
+        width: 1024,
+        height: 1024,
       },
     ],
-    apple: "/apple-icon.png",
   },
 }
 

@@ -4,6 +4,7 @@ import { useProducts } from "@/lib/hooks"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { AlertCircle, ShoppingCart } from "lucide-react"
+import Image from "next/image"
 
 interface DashboardProps {
   onStartSale: () => void
@@ -32,6 +33,10 @@ export default function Dashboard({ onStartSale }: DashboardProps) {
 
   return (
     <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-6">
+      <div className="flex items-center justify-center mb-8">
+        <Image src="/logo.png" alt="StockSwift Logo" width={120} height={120} priority className="object-contain" />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-6 bg-gradient-to-br from-accent to-accent/80 text-accent-foreground">
           <h3 className="font-semibold mb-2">Produtos em Estoque</h3>
