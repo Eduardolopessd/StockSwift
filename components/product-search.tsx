@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useProducts } from "@/lib/hooks"
 import type { Product } from "@/lib/db"
-import { Search, Camera, ChevronRight } from "lucide-react"
+import { Search, ChevronRight } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -39,9 +39,6 @@ export default function ProductSearch() {
             className="pl-10"
           />
         </div>
-        <Button variant="outline" size="icon">
-          <Camera className="w-5 h-5" />
-        </Button>
       </div>
 
       <div className="space-y-2">
@@ -57,6 +54,13 @@ export default function ProductSearch() {
               onClick={() => setSelectedProduct(product)}
             >
               <div className="flex items-center justify-between">
+                {product.photo && (
+                  <img
+                    src={product.photo || "/placeholder.svg"}
+                    alt={product.name}
+                    className="w-12 h-12 object-cover rounded mr-3"
+                  />
+                )}
                 <div className="flex-1">
                   <h4 className="font-semibold">{product.name}</h4>
                   <div className="text-sm text-muted-foreground space-y-1 mt-1">
@@ -112,6 +116,12 @@ function ProductDetail({ product, onBack }: ProductDetailProps) {
       </Button>
 
       <Card className="p-6 space-y-4">
+        {product.photo && (
+          <div className="w-full h-48 bg-muted rounded-lg overflow-hidden">
+            <img src={product.photo || "/placeholder.svg"} alt={product.name} className="w-full h-full object-cover" />
+          </div>
+        )}
+
         <h2 className="text-2xl font-bold">{product.name}</h2>
 
         <div className="grid grid-cols-2 gap-4">

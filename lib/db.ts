@@ -8,7 +8,7 @@ export interface Product {
   salePrice: number
   expiryDate: string
   description?: string
-  image?: string
+  photo?: string
   createdAt: number
   updatedAt: number
 }

@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useProducts } from "@/lib/hooks"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,8 @@ export default function AddProduct({ onComplete }: AddProductProps) {
   const { addProduct } = useProducts()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [photoPreview, setPhotoPreview] = useState<string>("")
 
   const [formData, setFormData] = useState({
     sku: "",
@@ -27,6 +29,21 @@ export default function AddProduct({ onComplete }: AddProductProps) {
     expiryDate: "",
     description: "",
   })
+
+  const handlePhotoClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -45,6 +62,7 @@ export default function AddProduct({ onComplete }: AddProductProps) {
       await addProduct({
         ...formData,
         internalCode: `INT_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        photo: photoPreview,
       })
 
       // Reset form
@@ -57,6 +75,7 @@ export default function AddProduct({ onComplete }: AddProductProps) {
         expiryDate: "",
         description: "",
       })
+      setPhotoPreview("")
 
       alert("Produto adicionado com sucesso!")
       onComplete()
@@ -78,6 +97,23 @@ export default function AddProduct({ onComplete }: AddProductProps) {
             </div>
           )}
 
+          {photoPreview && (
+            <div className="relative w-full h-40 bg-muted rounded-lg overflow-hidden">
+              <img
+                src={photoPreview || "/placeholder.svg"}
+                alt="Prévia do produto"
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => setPhotoPreview("")}
+                className="absolute top-2 right-2 bg-destructive text-white rounded-full w-8 h-8 flex items-center justify-center text-sm"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium mb-2">SKU / Código de Barras *</label>
             <div className="flex gap-2">
@@ -87,9 +123,10 @@ export default function AddProduct({ onComplete }: AddProductProps) {
                 value={formData.sku}
                 onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
               />
-              <Button type="button" variant="outline" size="icon">
+              <Button type="button" variant="outline" size="icon" onClick={handlePhotoClick}>
                 <Camera className="w-5 h-5" />
               </Button>
+              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoSelect} />
             </div>
           </div>
 
