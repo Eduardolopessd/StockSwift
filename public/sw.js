@@ -1,79 +1,102 @@
 const CACHE_NAME = "stockswift-v1"
-const URLS_TO_CACHE = ["/", "/index.html", "/offline.html"]
+const URLS_TO_CACHE = ["/", "/manifest.json", "/offline.html"]
 
-// Instalar Service Worker e cachear arquivos
 self.addEventListener("install", (event) => {
+  console.log("[Service Worker] Installing...")
   event.waitUntil(
     caches
       .open(CACHE_NAME)
       .then((cache) => {
-        console.log("[Service Worker] Cacheando arquivos...")
-        return cache.addAll(URLS_TO_CACHE).catch((err) => {
-          console.log("[Service Worker] Erro ao cachear:", err)
-        })
+        console.log("[Service Worker] Caching core files")
+        // Tenta cachear, mas não falha se algum arquivo não existir
+        return Promise.allSettled([cache.add("/"), cache.add("/manifest.json")])
       })
-      .then(() => self.skipWaiting()),
+      .then(() => {
+        console.log("[Service Worker] Installed")
+        return self.skipWaiting()
+      }),
   )
 })
 
-// Ativar Service Worker
 self.addEventListener("activate", (event) => {
+  console.log("[Service Worker] Activating...")
   event.waitUntil(
     caches
       .keys()
       .then((cacheNames) => {
         return Promise.all(
-          cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME) {
-              console.log("[Service Worker] Removendo cache antigo:", cacheName)
+          cacheNames
+            .filter((cacheName) => cacheName !== CACHE_NAME)
+            .map((cacheName) => {
+              console.log("[Service Worker] Deleting old cache:", cacheName)
               return caches.delete(cacheName)
-            }
-          }),
+            }),
         )
       })
-      .then(() => self.clients.claim()),
+      .then(() => {
+        console.log("[Service Worker] Activated")
+        return self.clients.claim()
+      }),
   )
 })
 
-// Estratégia: Network First, fallback para Cache
 self.addEventListener("fetch", (event) => {
   const { request } = event
   const url = new URL(request.url)
 
-  // Skip chrome extensions e dados base64
+  // Ignora extensões e dados
   if (url.protocol === "chrome-extension:" || request.url.includes("blob:")) {
     return
   }
 
-  // Para requisições GET
   if (request.method === "GET") {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Cache válido apenas se status 200
-          if (response.status === 200) {
-            const cache = caches.open(CACHE_NAME)
-            cache.then((c) => c.put(request, response.clone()))
+      // Tenta cache primeiro
+      caches
+        .match(request)
+        .then((cachedResponse) => {
+          if (cachedResponse) {
+            console.log("[Service Worker] Served from cache:", request.url)
+            return cachedResponse
           }
-          return response
-        })
-        .catch(() => {
-          // Se falhar, tenta cache
-          return caches.match(request).then((cachedResponse) => {
-            if (cachedResponse) {
-              return cachedResponse
-            }
-            // Se não tiver cache, retorna página offline
-            if (request.destination === "document") {
-              return caches.match("/offline.html")
-            }
-          })
+
+          // Se não tem cache, tenta fetch da rede
+          return fetch(request)
+            .then((response) => {
+              // Se conseguiu fetch e é válido, cacheia
+              if (!response || response.status !== 200 || response.type === "error") {
+                return response
+              }
+
+              const responseToCache = response.clone()
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(request, responseToCache)
+                console.log("[Service Worker] Cached:", request.url)
+              })
+
+              return response
+            })
+            .catch((error) => {
+              console.log("[Service Worker] Fetch failed, returning cached version:", error)
+              // Se falhar a rede e não tiver cache, retorna página offline
+              return caches.match(request).catch(() => {
+                if (request.destination === "document") {
+                  return (
+                    caches.match("/") ||
+                    new Response("Offline - Por favor, recarregue quando tiver conexão", {
+                      status: 503,
+                      statusText: "Service Unavailable",
+                    })
+                  )
+                }
+              })
+            })
         }),
     )
   }
 })
 
-// Sincronizar dados quando voltar online
+// Sincroniza quando volta online
 self.addEventListener("sync", (event) => {
   if (event.tag === "sync-data") {
     event.waitUntil(
@@ -81,7 +104,7 @@ self.addEventListener("sync", (event) => {
         clients.forEach((client) => {
           client.postMessage({
             type: "SYNC_ONLINE",
-            online: navigator.onLine,
+            online: true,
           })
         })
       }),

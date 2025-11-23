@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { Menu, Plus, BarChart3, Settings, Package, Trash2 } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Menu, Plus, BarChart3, Settings, Package, Trash2, Wifi, WifiOff } from "lucide-react"
 import Dashboard from "@/components/dashboard"
 import ProductSearch from "@/components/product-search"
 import AddProduct from "@/components/add-product"
@@ -17,6 +17,51 @@ type Screen = "dashboard" | "search" | "add" | "remove" | "sales" | "report" | "
 export default function Home() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("dashboard")
   const [menuOpen, setMenuOpen] = useState(false)
+  const [isOnline, setIsOnline] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    setIsOnline(navigator.onLine)
+    setIsLoading(false)
+
+    const handleOnline = () => {
+      console.log("[App] Online")
+      setIsOnline(true)
+    }
+
+    const handleOffline = () => {
+      console.log("[App] Offline")
+      setIsOnline(false)
+    }
+
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data.type === "SYNC_ONLINE") {
+          console.log("[App] Dados sincronizados")
+          setIsOnline(event.data.online)
+        }
+      })
+    }
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="mb-4 text-4xl">📱</div>
+          <p className="text-foreground/70">Carregando StockSwift...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -105,9 +150,22 @@ export default function Home() {
             {currentScreen === "report" && "Relatório"}
             {currentScreen === "settings" && "Configurações"}
           </h2>
-          <button className="md:hidden p-2 hover:bg-muted rounded-lg" onClick={() => setCurrentScreen("dashboard")}>
-            Home
-          </button>
+          <div className="flex items-center gap-2">
+            {isOnline ? (
+              <div className="flex items-center gap-1 text-green-600 text-sm">
+                <Wifi className="w-4 h-4" />
+                <span className="hidden sm:inline">Online</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 text-orange-600 text-sm">
+                <WifiOff className="w-4 h-4" />
+                <span className="hidden sm:inline">Offline</span>
+              </div>
+            )}
+            <button className="md:hidden p-2 hover:bg-muted rounded-lg" onClick={() => setCurrentScreen("dashboard")}>
+              Home
+            </button>
+          </div>
         </header>
 
         {/* Screen Content */}
