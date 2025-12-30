@@ -9,6 +9,7 @@ export interface Product {
   expiryDate: string
   description?: string
   photo?: string
+  isDefault?: boolean // Added flag to identify default products
   createdAt: number
   updatedAt: number
 }
@@ -238,6 +239,40 @@ class StockSwiftDB {
       tx.onerror = () => reject(tx.error)
       tx.oncomplete = () => resolve()
     })
+  }
+
+  async syncDefaultProducts(): Promise<void> {
+    try {
+      const response = await fetch("/api/default-products")
+      const data = await response.json()
+
+      if (data.products && data.products.length > 0) {
+        // Get existing default products
+        const existingProducts = await this.getAllProducts()
+        const existingDefaultIds = new Set(existingProducts.filter((p) => p.isDefault).map((p) => p.id))
+
+        // Add new default products that don't exist yet
+        for (const defaultProduct of data.products) {
+          if (!existingDefaultIds.has(defaultProduct.id)) {
+            await this.addProduct({
+              ...defaultProduct,
+              isDefault: true,
+            })
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error syncing default products:", error)
+    }
+  }
+
+  async removeDefaultProducts(): Promise<void> {
+    const allProducts = await this.getAllProducts()
+    const defaultProducts = allProducts.filter((p) => p.isDefault)
+
+    for (const product of defaultProducts) {
+      await this.deleteProduct(product.id)
+    }
   }
 }
 

@@ -5,6 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { Menu, Plus, BarChart3, Settings, Package, Trash2, Wifi, WifiOff } from "lucide-react"
 import Image from "next/image"
+import { db } from "@/lib/db"
 import Dashboard from "@/components/dashboard"
 import ProductSearch from "@/components/product-search"
 import AddProduct from "@/components/add-product"
@@ -23,7 +24,29 @@ export default function Home() {
 
   useEffect(() => {
     setIsOnline(navigator.onLine)
-    setIsLoading(false)
+
+    const initApp = async () => {
+      try {
+        await db.init()
+
+        // Sync default products only once per session
+        const lastSync = localStorage.getItem("lastDefaultProductSync")
+        const now = Date.now()
+
+        if (!lastSync || now - Number.parseInt(lastSync) > 60000) {
+          console.log("[v0] Syncing default products...")
+          await db.syncDefaultProducts()
+          localStorage.setItem("lastDefaultProductSync", now.toString())
+          console.log("[v0] Default products synced successfully")
+        }
+      } catch (error) {
+        console.error("[v0] Error initializing app:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    initApp()
 
     const handleOnline = () => {
       console.log("[App] Online")

@@ -4,13 +4,14 @@ import { useEffect, useState } from "react"
 import { db, type BackupData } from "@/lib/db"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, Download, Upload, Moon, Sun, Trash2 } from "lucide-react"
+import { AlertCircle, Download, Upload, Moon, Sun, Trash2, RefreshCw, Package } from "lucide-react"
 
 export default function SettingsScreen() {
   const [theme, setTheme] = useState<"light" | "dark">("light")
   const [loading, setLoading] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [syncingDefaults, setSyncingDefaults] = useState(false)
 
   useEffect(() => {
     // Load theme preference
@@ -121,6 +122,40 @@ export default function SettingsScreen() {
     }
   }
 
+  const handleSyncDefaultProducts = async () => {
+    setSyncingDefaults(true)
+    try {
+      await db.init()
+      await db.syncDefaultProducts()
+      alert("Produtos padrão adicionados com sucesso!")
+      window.location.reload()
+    } catch (error) {
+      console.error("Error syncing default products:", error)
+      alert("Erro ao sincronizar produtos padrão")
+    } finally {
+      setSyncingDefaults(false)
+    }
+  }
+
+  const handleRemoveDefaultProducts = async () => {
+    if (!confirm("Deseja remover todos os produtos padrão do seu estoque?")) {
+      return
+    }
+
+    setSyncingDefaults(true)
+    try {
+      await db.init()
+      await db.removeDefaultProducts()
+      alert("Produtos padrão removidos com sucesso!")
+      window.location.reload()
+    } catch (error) {
+      console.error("Error removing default products:", error)
+      alert("Erro ao remover produtos padrão")
+    } finally {
+      setSyncingDefaults(false)
+    }
+  }
+
   return (
     <div className="p-4 space-y-6 pb-20">
       {/* Theme */}
@@ -143,6 +178,37 @@ export default function SettingsScreen() {
           </div>
           <Button onClick={toggleTheme} variant="outline" size="sm">
             Alterar
+          </Button>
+        </div>
+      </Card>
+
+      {/* Default Products Management */}
+      <Card className="p-6 space-y-4">
+        <h3 className="font-semibold text-lg">Produtos Padrão</h3>
+
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Adicione ou remova produtos padrão configurados pelo administrador. Esses produtos são compartilhados com
+            todos os usuários.
+          </p>
+
+          <Button
+            onClick={handleSyncDefaultProducts}
+            disabled={syncingDefaults || loading}
+            className="w-full bg-accent"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Adicionar Produtos Padrão
+          </Button>
+
+          <Button
+            onClick={handleRemoveDefaultProducts}
+            disabled={syncingDefaults || loading}
+            variant="outline"
+            className="w-full bg-transparent"
+          >
+            <Package className="w-4 h-4 mr-2" />
+            Remover Produtos Padrão
           </Button>
         </div>
       </Card>

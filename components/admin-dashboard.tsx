@@ -2,20 +2,34 @@
 
 import type React from "react"
 
-import { useState } from "react"
-import { useProducts } from "@/lib/hooks"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { LogOut, Plus, Search, Trash2, Package, AlertCircle, Edit2, Save, X } from "lucide-react"
-import type { Product } from "@/lib/db"
+import { LogOut, Plus, Search, Trash2, Package, AlertCircle, Save, X } from "lucide-react"
+
+interface Product {
+  id: string
+  sku: string
+  internalCode: string
+  name: string
+  quantity: number
+  costPrice: number
+  salePrice: number
+  expiryDate: string
+  description?: string
+  isDefault: boolean
+  createdAt: number
+  updatedAt: number
+}
 
 interface AdminDashboardProps {
   onLogout: () => void
 }
 
 export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
-  const { products, addProduct, deleteProduct, updateProduct, loading } = useProducts()
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -30,6 +44,22 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
     expiryDate: "",
     description: "",
   })
+
+  useEffect(() => {
+    loadProducts()
+  }, [])
+
+  const loadProducts = async () => {
+    try {
+      const response = await fetch("/api/default-products")
+      const data = await response.json()
+      setProducts(data.products || [])
+    } catch (error) {
+      console.error("Error loading products:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const filteredProducts = products.filter(
     (p) =>
@@ -51,16 +81,29 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         throw new Error("Preços devem ser maiores que zero")
       }
 
+      const response = await fetch("/api/default-products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: "r[dDbzPfQW",
+          product: {
+            ...formData,
+            internalCode: `GLOBAL_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao salvar produto")
+      }
+
+      const data = await response.json()
+
       if (editingId) {
-        await updateProduct(editingId, formData)
         alert("Produto atualizado com sucesso!")
         setEditingId(null)
       } else {
-        await addProduct({
-          ...formData,
-          internalCode: `GLOBAL_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-        })
-        alert("Produto global adicionado com sucesso!")
+        alert("Produto global adicionado com sucesso! Todos os usuários poderão sincronizá-lo.")
       }
 
       setFormData({
@@ -73,6 +116,8 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         description: "",
       })
       setShowAddForm(false)
+
+      await loadProducts()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao salvar produto")
     }
@@ -93,9 +138,28 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
   }
 
   const handleDelete = async (id: string, name: string) => {
-    if (confirm(`Tem certeza que deseja remover "${name}"?`)) {
-      await deleteProduct(id)
+    if (!confirm(`Tem certeza que deseja remover "${name}"? Isso afetará todos os usuários.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch("/api/default-products", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          password: "r[dDbzPfQW",
+          productId: id,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao remover produto")
+      }
+
       alert("Produto removido com sucesso!")
+      await loadProducts()
+    } catch (error) {
+      alert("Erro ao remover produto: " + (error instanceof Error ? error.message : "Desconhecido"))
     }
   }
 
@@ -189,7 +253,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         {/* Add/Edit Form */}
         {showAddForm && (
           <Card className="p-6">
-            <h2 className="text-lg font-bold mb-4">{editingId ? "Editar Produto" : "Adicionar Novo Produto"}</h2>
+            <h2 className="text-lg font-bold mb-4">{editingId ? "Editar Produto" : "Adicionar Novo Produto Global"}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
@@ -280,7 +344,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
               <div className="flex gap-2">
                 <Button type="submit" className="bg-success flex-1">
                   <Save className="w-4 h-4 mr-2" />
-                  {editingId ? "Salvar Alterações" : "Adicionar"}
+                  {editingId ? "Salvar Alterações" : "Adicionar Globalmente"}
                 </Button>
                 <Button type="button" variant="outline" onClick={handleCancel}>
                   <X className="w-4 h-4 mr-2" />
@@ -293,7 +357,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
         {/* Products List */}
         <Card className="p-4">
-          <h2 className="text-lg font-bold mb-4">Produtos Cadastrados ({filteredProducts.length})</h2>
+          <h2 className="text-lg font-bold mb-4">Produtos Globais Cadastrados ({filteredProducts.length})</h2>
 
           {filteredProducts.length === 0 ? (
             <div className="text-center py-12">
@@ -322,9 +386,6 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="icon" onClick={() => handleEdit(product)}>
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
                     <Button
                       variant="outline"
                       size="icon"
