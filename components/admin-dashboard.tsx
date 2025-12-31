@@ -147,7 +147,7 @@ export default function AdminDashboard({ onLogout }: AdminDashboardProps) {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          password: "r[dDbzPfQW",
+          password: "process.env.NEXT_PUBLIC_DELETE_PASSWORD",
           productId: id,
         }),
       })
